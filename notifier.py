@@ -114,12 +114,26 @@ def _plain(text):
     return html.unescape(text)
 
 
-def send_alert(company, sender, subject, summary, category):
-    emoji = CATEGORY_EMOJI.get(category, "\U0001F4E7")
-    text = (
-        f"{emoji} <b>{esc(company)}</b>\n"
-        f"From: {esc(sender)}\n"
-        f"Subject: {esc(subject)}\n"
-        f"{esc(summary)}"
-    )
-    return send_message(text)
+def send_alert(company, sender, subject, summary, category, action="", deadline="", date=""):
+    """One alert, ending with what to do about it."""
+    emoji = CATEGORY_EMOJI.get(category, "📧")
+
+    parts = [
+        f"{emoji} <b>{esc(company)}</b>",
+        f"From: {esc(sender)}",
+        f"Subject: <b>{esc(subject)}</b>",
+    ]
+    if date:
+        parts.append(esc(date))
+    if summary:
+        parts.append("")
+        parts.append(esc(summary))
+    if deadline:
+        parts.append("")
+        parts.append(f"⏰ <b>Deadline:</b> {esc(deadline)}")
+    if action:
+        if not deadline:
+            parts.append("")
+        parts.append(f"👉 <b>{esc(action)}</b>")
+
+    return send_message("\n".join(parts))

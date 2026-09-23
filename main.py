@@ -78,21 +78,31 @@ def _handle_messages(mailbox, result, state, summary):
             # surprise here must not cost us the rest of the mailbox.
             summary["errors"].append(f"{company}: classify failed: {exc}")
             verdict = {"category": "needs_reply", "important": True,
-                       "one_line_summary": message["subject"][:80]}
+                       "summary": message["subject"][:120],
+                       "action": "Check this one", "deadline": ""}
 
         if verdict.get("error"):
             summary["errors"].append(f"{company}: {verdict['error']}")
 
-        flag = "ALERT" if verdict["important"] else "  -  "
-        print(f"[{flag}] {company}: {message['subject'][:60]} -> {verdict['category']}")
+        important = verdict["important"]
 
-        if verdict["important"]:
+        # "all" alerts on everything; "important" only on what matters.
+        alert_on = config.setting("alert_on", "important")
+        should_alert = important or alert_on == "all"
+
+        flag = "ALERT" if should_alert else "  -  "
+        print(f"[{flag}] {company}: {message['subject'][:55]} -> {verdict['category']}")
+
+        if should_alert:
             sent = send_alert(
                 company=company,
                 sender=sender,
                 subject=message["subject"],
-                summary=verdict.get("one_line_summary", ""),
+                summary=verdict.get("summary", ""),
                 category=verdict.get("category", ""),
+                action=verdict.get("action", ""),
+                deadline=verdict.get("deadline", ""),
+                date=message.get("date", ""),
             )
             if sent:
                 summary["alerted"] += 1

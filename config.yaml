@@ -157,6 +157,8 @@ mailboxes:
     mode: "all"
 
 settings:
+  # "all" = a message for every email. "important" = only what matters.
+  alert_on: "all"
   bot_name: "Kingdom Group Mailer"
   poll_interval_minutes: 30
   state_file: "state.json"

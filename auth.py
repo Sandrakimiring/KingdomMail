@@ -8,6 +8,8 @@ Layers, outermost first:
 Anything from an unknown account is refused, logged, and reported to the owner.
 """
 
+import hmac
+import json
 import threading
 import time
 from collections import defaultdict, deque
@@ -17,6 +19,11 @@ import config
 
 # Most questions one person may ask per minute.
 MAX_QUESTIONS_PER_MINUTE = 10
+
+# How long a chat stays unlocked after the passcode is accepted.
+UNLOCK_HOURS = 24
+
+_SESSION_FILE = "sessions.json"
 
 _lock = threading.Lock()
 _recent_questions = defaultdict(deque)
@@ -90,6 +97,76 @@ def should_report_stranger(chat_id):
         return True
 
 
+# --- Passcode -----------------------------------------------------------
+# An optional fourth layer. The allow-list already stops strangers; this also
+# covers the case where someone picks up an unlocked phone that belongs to an
+# approved person. Set BOT_PASSCODE to switch it on.
+
+
+def passcode():
+    return config.env("BOT_PASSCODE", "").strip()
+
+
+def passcode_required():
+    return bool(passcode())
+
+
+def _load_sessions():
+    path = config.state_path(_SESSION_FILE)
+    if not path.exists():
+        return {}
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {}
+
+
+def _save_sessions(sessions):
+    path = config.state_path(_SESSION_FILE)
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(sessions, f, indent=2)
+    except OSError as exc:
+        print(f"[warn] could not save sessions: {exc}")
+
+
+def is_unlocked(chat_id):
+    """True when this chat has entered the passcode recently enough."""
+    if not passcode_required():
+        return True
+    key = normalise_id(chat_id)
+    with _lock:
+        sessions = _load_sessions()
+        expires = sessions.get(key, 0)
+    return time.time() < expires
+
+
+def try_unlock(chat_id, text):
+    """Accept the passcode. Compared in constant time so it cannot be guessed by timing."""
+    supplied = (text or "").strip()
+    if not hmac.compare_digest(supplied, passcode()):
+        return False
+    key = normalise_id(chat_id)
+    with _lock:
+        sessions = _load_sessions()
+        sessions[key] = time.time() + UNLOCK_HOURS * 3600
+        # Drop anything already expired while we are here.
+        now = time.time()
+        sessions = {k: v for k, v in sessions.items() if v > now}
+        _save_sessions(sessions)
+    return True
+
+
+def lock(chat_id):
+    """End this chat's session immediately."""
+    key = normalise_id(chat_id)
+    with _lock:
+        sessions = _load_sessions()
+        sessions.pop(key, None)
+        _save_sessions(sessions)
+
+
 def log(event, message, detail=""):
     """One audit line per request. Shows up in the host's logs."""
     stamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
@@ -107,6 +184,11 @@ def startup_warnings():
     if not config.env("RUN_TOKEN"):
         warnings.append(
             "RUN_TOKEN is not set — /run-check can be triggered by anyone who learns the URL."
+        )
+    if not passcode_required():
+        warnings.append(
+            "BOT_PASSCODE is not set — anyone holding an approved person's unlocked "
+            "phone could ask the bot questions."
         )
     if not allowed_chat_ids():
         warnings.append(

@@ -128,7 +128,33 @@ def telegram_webhook():
                 )
         return "ignored", 200
 
-    # Layer 3: an approved account still cannot hammer the mailboxes.
+    # Layer 3: the passcode, when one is set. This covers an approved person's
+    # phone being picked up by someone else.
+    if auth.passcode_required() and not auth.is_unlocked(chat_id):
+        if auth.try_unlock(chat_id, text):
+            auth.log("unlocked", message)
+            send_message(
+                "🔓 Unlocked for " + str(auth.UNLOCK_HOURS) + " hours.\n\n"
+                "Please delete the message with the passcode in it.\n\n"
+                "Send /lock when you are done.",
+                chat_id=chat_id,
+            )
+            send_message(secretary.WELCOME_TEXT, chat_id=chat_id)
+        else:
+            auth.log("locked-out", message)
+            send_message(
+                "🔒 Locked. Send the passcode to unlock.", chat_id=chat_id
+            )
+        return "ok", 200
+
+    if text.strip().lower().lstrip("/") == "lock":
+        auth.lock(chat_id)
+        auth.log("locked", message)
+        send_message("🔒 Locked. Send the passcode when you need me again.",
+                     chat_id=chat_id)
+        return "ok", 200
+
+    # Layer 4: an approved account still cannot hammer the mailboxes.
     if not auth.within_rate_limit(chat_id):
         auth.log("rate-limited", message)
         send_message("That's a lot of questions at once — give me a minute.", chat_id=chat_id)

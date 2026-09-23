@@ -29,22 +29,30 @@ VALID_CATEGORIES = {
 }
 IMPORTANT_CATEGORIES = {"tender_or_business_critical", "needs_reply"}
 
-SYSTEM_PROMPT = """You classify incoming business emails for a busy owner who runs several \
-small companies (tenders, oil & gas supply, general trade). You will be given a sender, \
-subject, and a short snippet of the email body. Reply with ONLY a JSON object, no other text:
+SYSTEM_PROMPT = """You brief a busy owner who runs several small companies (tenders, oil and gas supply, general trade) on their incoming email. You are given a sender, subject and part of the body. Reply with ONLY a JSON object:
 
 {
   "category": one of ["tender_or_business_critical", "needs_reply", "marketing_or_spam", "routine_fyi"],
-  "one_line_summary": "short plain summary, under 15 words"
+  "summary": "2 to 3 short sentences saying what this email actually says and why it matters",
+  "action": "what the owner should do about it, under 10 words",
+  "deadline": "any date or deadline stated in the email, or null"
 }
 
-Use "tender_or_business_critical" for tenders, bids, contracts, invoices, payments, \
-legal or regulatory notices, and anything with a deadline.
-Use "needs_reply" when a real person is asking a question or waiting on a response.
-Use "marketing_or_spam" for newsletters, promotions, cold sales outreach and bulk mail.
-Use "routine_fyi" for automated receipts, notifications and no-action updates.
+Categories:
+- "tender_or_business_critical": tenders, bids, contracts, invoices, payments, legal
+  or regulatory notices, anything with money or a deadline attached.
+- "needs_reply": a real person is asking something or waiting on a response.
+- "marketing_or_spam": newsletters, promotions, cold sales outreach, bulk mail.
+- "routine_fyi": automated receipts, notifications, no-action updates.
 
-Be conservative: if genuinely unsure between an important and an unimportant category, \
+For "summary", say what is actually in the email. Name the amounts, reference numbers,
+dates and people mentioned. Do not just restate the subject line. Write plainly, as
+you would tell someone in person.
+
+For "action", be specific and practical: "Reply with your availability",
+"Submit bid documents by Friday", "Pay KES 45,000", "No action needed".
+
+Be conservative: if genuinely unsure between an important and unimportant category,
 choose "needs_reply" so nothing critical is missed."""
 
 
@@ -114,29 +122,37 @@ def classify_email(sender, subject, snippet):
     user_content = f"From: {sender}\nSubject: {subject}\nBody snippet: {snippet}"
 
     try:
-        parsed = _ask(SYSTEM_PROMPT, user_content)
+        parsed = _ask(SYSTEM_PROMPT, user_content, max_tokens=500)
     except Exception as exc:
         return {
             "category": "needs_reply",
             "important": True,
-            "one_line_summary": (subject or "")[:80],
+            "summary": (subject or "")[:120],
+            "action": "Check this one - it could not be summarised",
+            "deadline": "",
             "error": f"{type(exc).__name__}: {exc}",
         }
 
     category = str(parsed.get("category", "")).strip()
-    summary = str(parsed.get("one_line_summary", "") or "").strip()
+    summary = str(parsed.get("summary", "") or "").strip()
+    action = str(parsed.get("action", "") or "").strip()
+    deadline = parsed.get("deadline")
+    deadline = str(deadline).strip() if deadline and str(deadline).lower() != "null" else ""
 
     if category not in VALID_CATEGORIES:
-        # Unrecognised answer — surface it rather than guess it away.
         return {
             "category": "needs_reply",
             "important": True,
-            "one_line_summary": summary or (subject or "")[:80],
+            "summary": summary or (subject or "")[:120],
+            "action": action or "Check this one",
+            "deadline": deadline,
             "error": f"unexpected category: {category!r}",
         }
 
     return {
         "category": category,
         "important": category in IMPORTANT_CATEGORIES,
-        "one_line_summary": summary or (subject or "")[:80],
+        "summary": summary or (subject or "")[:120],
+        "action": action,
+        "deadline": deadline,
     }

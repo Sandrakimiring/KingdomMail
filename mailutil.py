@@ -18,7 +18,7 @@ from imapclient import IMAPClient
 
 # How much of each message to download. Enough to reach the readable text in
 # almost every email, small enough that a large attachment is never pulled.
-BODY_PEEK_BYTES = 16384
+BODY_PEEK_BYTES = 32768
 DEFAULT_TIMEOUT = 30
 
 
@@ -159,7 +159,7 @@ def _decode_part(part):
         return payload.decode("utf-8", errors="replace")
 
 
-def extract_snippet(raw, limit=600):
+def extract_snippet(raw, limit=1500):
     """
     Readable text from a raw MIME message.
 
@@ -218,3 +218,26 @@ def drop_quoted_reply(text):
 
 def collapse_whitespace(text):
     return " ".join((text or "").split())
+
+
+# Headers that mark mail as bulk. Marketing is legally required to carry
+# List-Unsubscribe, and a person writing about a tender never does.
+BULK_HEADERS = ("list-unsubscribe", "list-id")
+
+
+def looks_like_bulk(raw):
+    """True when the message advertises itself as bulk or list mail."""
+    if not raw:
+        return False
+    if isinstance(raw, str):
+        raw = raw.encode("utf-8", errors="replace")
+    try:
+        message = email.message_from_bytes(raw)
+    except Exception:
+        return False
+    for header in BULK_HEADERS:
+        if message.get(header):
+            return True
+    if str(message.get("precedence", "")).lower().strip() in {"bulk", "junk", "list"}:
+        return True
+    return False
