@@ -66,6 +66,8 @@ def status():
         "mailboxes_watched": len(usable),
         "mailboxes_missing_password": [m["company"] for m in missing],
         "check_interval_minutes": config.setting("poll_interval_minutes", 30),
+        "passcode_enabled": auth.passcode_required(),
+        "approved_count": len(auth.allowed_chat_ids()),
         "last_run": monitor.last_run(),
     })
 
