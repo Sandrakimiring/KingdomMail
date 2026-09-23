@@ -24,6 +24,7 @@ MAX_QUESTIONS_PER_MINUTE = 10
 UNLOCK_HOURS = 24
 
 _SESSION_FILE = "sessions.json"
+_APPROVED_FILE = "approved.json"
 
 _lock = threading.Lock()
 _recent_questions = defaultdict(deque)
@@ -50,7 +51,76 @@ def allowed_chat_ids():
     owner = normalise_id(config.env("TELEGRAM_CHAT_ID", ""))
     if owner:
         ids.add(owner)
+    ids.update(_load_approved().keys())
     return ids
+
+
+# --- Approved people ----------------------------------------------------
+# Two sources. Ids in TELEGRAM_ALLOWED_CHAT_IDS are permanent and survive a
+# redeploy. Ids approved from inside Telegram are kept in a file, which is
+# quicker but is lost if the host wipes its disk, so move them into the
+# environment variable once they are settled.
+
+
+def _load_approved():
+    path = config.state_path(_APPROVED_FILE)
+    if not path.exists():
+        return {}
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {}
+
+
+def _save_approved(approved):
+    try:
+        with open(config.state_path(_APPROVED_FILE), "w", encoding="utf-8") as f:
+            json.dump(approved, f, indent=2)
+    except OSError as exc:
+        print(f"[warn] could not save approvals: {exc}")
+
+
+def approve(chat_id, label=""):
+    """Add someone. Returns False if they were already approved."""
+    key = normalise_id(chat_id)
+    if not key:
+        return False
+    with _lock:
+        approved = _load_approved()
+        if key in approved:
+            return False
+        approved[key] = label or "approved from Telegram"
+        _save_approved(approved)
+    return True
+
+
+def revoke(chat_id):
+    """Remove someone approved from Telegram. Environment ids cannot be removed here."""
+    key = normalise_id(chat_id)
+    with _lock:
+        approved = _load_approved()
+        existed = approved.pop(key, None) is not None
+        if existed:
+            _save_approved(approved)
+    lock(key)
+    return existed
+
+
+def approved_list():
+    """[(chat_id, label, permanent)] across both sources."""
+    rows = []
+    for raw in config.env("TELEGRAM_ALLOWED_CHAT_IDS", "").split(","):
+        key = normalise_id(raw)
+        if key:
+            rows.append((key, "from environment", True))
+    owner = owner_chat_id()
+    if owner:
+        rows.append((owner, "owner", True))
+    for key, label in _load_approved().items():
+        if not any(key == existing for existing, _, _ in rows):
+            rows.append((key, label, False))
+    return rows
 
 
 def owner_chat_id():

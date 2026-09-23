@@ -82,6 +82,45 @@ def run_check():
     return "check started", 202
 
 
+def _owner_command(chat_id, text):
+    """/approve, /revoke and /who. Owner only. None if not one of those."""
+    if auth.normalise_id(chat_id) != auth.owner_chat_id():
+        return None
+
+    parts = text.strip().split()
+    command = parts[0].lower().lstrip("/").split("@")[0]
+
+    if command == "who":
+        rows = auth.approved_list()
+        lines = ["<b>Approved</b>"]
+        for identifier, label, permanent in rows:
+            mark = "" if permanent else "  (temporary)"
+            lines.append(f"<code>{esc(identifier)}</code> - {esc(label)}{mark}")
+        lines.append("")
+        lines.append("/approve &lt;id&gt; to add, /revoke &lt;id&gt; to remove.")
+        return "\n".join(lines)
+
+    if command in {"approve", "revoke"}:
+        if len(parts) < 2:
+            return f"Use /{command} &lt;id&gt;"
+        target = auth.normalise_id(parts[1])
+        label = " ".join(parts[2:]) or "approved from Telegram"
+        if command == "approve":
+            if auth.approve(target, label):
+                send_message(
+                    "You have been approved for " + secretary.BOT_NAME + ".",
+                    chat_id=target,
+                )
+                send_message(secretary.WELCOME_TEXT, chat_id=target)
+                return f"Approved <code>{esc(target)}</code>."
+            return f"<code>{esc(target)}</code> was already approved."
+        if auth.revoke(target):
+            return f"Removed <code>{esc(target)}</code>."
+        return f"<code>{esc(target)}</code> was not on the list, or is set in the environment."
+
+    return None
+
+
 def _handle_question(chat_id, text):
     """Answer one Telegram message. Runs on a background thread."""
     try:
@@ -120,13 +159,22 @@ def telegram_webhook():
             owner = auth.owner_chat_id()
             if owner:
                 send_message(
-                    "⚠️ Someone outside the approved list messaged the bot:\n"
+                    "New person messaged the bot:\n"
                     f"{esc(auth.describe(message))}\n"
-                    f"They asked: {esc(text[:120])}\n\n"
-                    "They were refused. Add them to TELEGRAM_ALLOWED_CHAT_IDS if they belong.",
+                    f"They said: {esc(text[:120])}\n\n"
+                    "To let them in, send:\n"
+                    f"<code>/approve {esc(str(chat_id))}</code>",
                     chat_id=owner,
                 )
         return "ignored", 200
+
+    # Owner commands work without unlocking, so access can always be managed.
+    if text.strip().startswith("/"):
+        reply = _owner_command(chat_id, text)
+        if reply:
+            auth.log("owner-command", message, repr(text[:40]))
+            send_message(reply, chat_id=chat_id)
+            return "ok", 200
 
     # Layer 3: the passcode, when one is set. This covers an approved person's
     # phone being picked up by someone else.

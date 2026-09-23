@@ -239,9 +239,28 @@ account cannot hammer the mail server.
 
 ### Adding someone
 
-Ask them to message the bot once. You will get an alert with their chat id.
-Add it to `TELEGRAM_ALLOWED_CHAT_IDS` (comma separated) in the environment and
-restart. Remove the id to revoke access.
+You do not need to know anyone's Telegram id in advance.
+
+1. Ask them to message the bot. Anything will do.
+2. They are refused, and you get a message naming them with a ready command:
+   `/approve 612345678`
+3. Send that command. They are let in immediately and get the welcome message.
+
+Other commands, owner only:
+
+| Command | What it does |
+|---|---|
+| `/who` | Lists everyone approved |
+| `/approve <id> <name>` | Adds someone |
+| `/revoke <id>` | Removes someone and ends their session |
+
+Approvals made this way are written to `approved.json` in the state directory.
+That file is lost if the host wipes its disk on redeploy, so once someone is
+settled, add their id to `TELEGRAM_ALLOWED_CHAT_IDS` in the environment, which
+is permanent. `/who` marks which are which.
+
+Only the chat in `TELEGRAM_CHAT_ID` can approve anyone. Owner commands work
+even when the bot is locked, so you can never lock yourself out of managing access.
 
 ### If the bot token leaks
 
