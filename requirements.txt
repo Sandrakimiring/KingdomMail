@@ -1,0 +1,9 @@
+# IMAPClient 3.x breaks on Python 3.13+ (imaplib made a needed attribute read-only).
+imapclient>=4.1.0
+# groq 0.11 passes a 'proxies' argument that httpx 0.28 removed.
+groq>=1.7.0
+requests==2.32.3
+python-dotenv==1.0.1
+pyyaml>=6.0.1
+flask==3.0.3
+gunicorn==23.0.0

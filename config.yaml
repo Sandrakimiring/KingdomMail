@@ -1,0 +1,163 @@
+# Phase 1: info@ mailboxes only.
+# Once approved, the rest (personal/named mailboxes) get added the same way.
+# Passwords go in .env, never here.
+#
+# The mail server is shared hosting: its TLS certificate is issued for
+# *.web-hosting.com, not for mail.<domain>. Connecting by the server
+# hostname below is what lets the certificate be verified properly.
+# cPanel shows this name under Email Accounts > Connect Devices >
+# Secure SSL Settings. If the account is moved to another server, update it here.
+
+mailboxes:
+  - company: "Balcom Solutions"
+    email: "info@balcom.solutions"
+    imap_host: "business61-1.web-hosting.com"
+    imap_port: 993
+    password_env: "BALCOM_INFO_PASSWORD"
+    mode: "all"
+
+  - company: "Beacon Contractors"
+    email: "info@beacon.contractors"
+    imap_host: "business61-1.web-hosting.com"
+    imap_port: 993
+    password_env: "BEACON_INFO_PASSWORD"
+    mode: "all"
+
+  - company: "Geowells"
+    email: "info@geowells.co.ke"
+    imap_host: "business61-1.web-hosting.com"
+    imap_port: 993
+    password_env: "GEOWELLS_INFO_PASSWORD"
+    mode: "all"
+
+  - company: "Kingdom Africa"
+    email: "info@kingdom.africa"
+    imap_host: "business61-1.web-hosting.com"
+    imap_port: 993
+    password_env: "KINGDOMAFRICA_INFO_PASSWORD"
+    mode: "all"
+
+  - company: "Kingdom Foundation"
+    email: "info@kingdom.foundation"
+    imap_host: "business61-1.web-hosting.com"
+    imap_port: 993
+    password_env: "KINGDOMFOUNDATION_INFO_PASSWORD"
+    mode: "all"
+
+  - company: "Kingdom Institute"
+    email: "info@kingdom.institute"
+    imap_host: "business61-1.web-hosting.com"
+    imap_port: 993
+    password_env: "KINGDOMINSTITUTE_INFO_PASSWORD"
+    mode: "all"
+
+  - company: "Kingdom Assets"
+    email: "info@kingdomassets.co.ke"
+    imap_host: "business61-1.web-hosting.com"
+    imap_port: 993
+    password_env: "KINGDOMASSETS_INFO_PASSWORD"
+    mode: "all"
+
+  - company: "Kingdom Capital Africa"
+    email: "info@kingdomcapital.africa"
+    imap_host: "business61-1.web-hosting.com"
+    imap_port: 993
+    password_env: "KCAFRICA_INFO_PASSWORD"
+    mode: "all"
+
+  - company: "Kingdom Capital Global"
+    email: "info@kingdomcapital.global"
+    imap_host: "business61-1.web-hosting.com"
+    imap_port: 993
+    password_env: "KCGLOBAL_INFO_PASSWORD"
+    mode: "all"
+
+  - company: "Kingdom Energies"
+    email: "info@kingdomenergies.com"
+    imap_host: "business61-1.web-hosting.com"
+    imap_port: 993
+    password_env: "KENERGIES_INFO_PASSWORD"
+    mode: "all"
+
+  - company: "Kingdom Foods"
+    email: "info@kingdomfoods.net"
+    imap_host: "business61-1.web-hosting.com"
+    imap_port: 993
+    password_env: "KFOODS_INFO_PASSWORD"
+    mode: "all"
+
+  - company: "Kingdom Group Holding"
+    email: "info@kingdomgroupholding.com"
+    imap_host: "business61-1.web-hosting.com"
+    imap_port: 993
+    password_env: "KGROUPHOLDING_INFO_PASSWORD"
+    mode: "all"
+
+  - company: "KingdomPay"
+    email: "info@kingdompay.org"
+    imap_host: "business61-1.web-hosting.com"
+    imap_port: 993
+    password_env: "KINGDOMPAY_INFO_PASSWORD"
+    mode: "all"
+
+  - company: "Kingdom Properties"
+    email: "info@kingdomproperties.africa"
+    imap_host: "business61-1.web-hosting.com"
+    imap_port: 993
+    password_env: "KPROPERTIES_INFO_PASSWORD"
+    mode: "all"
+
+  - company: "Ray Energy"
+    email: "info@rayenergy.co.ke"
+    imap_host: "business61-1.web-hosting.com"
+    imap_port: 993
+    password_env: "RAYENERGY_INFO_PASSWORD"
+    mode: "all"
+
+  - company: "Regnum Media"
+    email: "info@regnum.media"
+    imap_host: "business61-1.web-hosting.com"
+    imap_port: 993
+    password_env: "REGNUM_INFO_PASSWORD"
+    mode: "all"
+
+  - company: "Salem Healthcare"
+    email: "info@salemhealthcare.co.ke"
+    imap_host: "business61-1.web-hosting.com"
+    imap_port: 993
+    password_env: "SALEMHEALTH_INFO_PASSWORD"
+    mode: "all"
+
+  - company: "Salem Pharmaceuticals"
+    email: "info@salempharmaceuticals.co.ke"
+    imap_host: "business61-1.web-hosting.com"
+    imap_port: 993
+    password_env: "SALEMPHARMA_INFO_PASSWORD"
+    mode: "all"
+
+  - company: "Shiloh Elevators"
+    email: "info@shilohelevators.com"
+    imap_host: "business61-1.web-hosting.com"
+    imap_port: 993
+    password_env: "SHILOH_INFO_PASSWORD"
+    mode: "all"
+
+  - company: "Sialo Enterprises"
+    email: "info@sialoenterprises.com"
+    imap_host: "business61-1.web-hosting.com"
+    imap_port: 993
+    password_env: "SIALOENT_INFO_PASSWORD"
+    mode: "all"
+
+  - company: "Spirit Africa"
+    email: "info@spirit.africa"
+    imap_host: "business61-1.web-hosting.com"
+    imap_port: 993
+    password_env: "SPIRITAFRICA_INFO_PASSWORD"
+    mode: "all"
+
+settings:
+  bot_name: "Kingdom Group Mailer"
+  poll_interval_minutes: 30
+  state_file: "state.json"
+  known_senders_file: "known_senders.json"

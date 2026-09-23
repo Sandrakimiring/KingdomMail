@@ -1,0 +1,7 @@
+.env
+venv/
+__pycache__/
+*.pyc
+state.json
+known_senders.json
+show_setup.py
