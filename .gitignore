@@ -7,3 +7,4 @@ known_senders.json
 show_setup.py
 sessions.json
 approved.json
+render_env.txt
