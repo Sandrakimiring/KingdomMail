@@ -33,7 +33,7 @@ def _read_envelopes(client, uids, limit):
                 "uid": uid,
                 "from": mailutil.envelope_sender(envelope),
                 "subject": mailutil.envelope_subject(envelope),
-                "date": mailutil.format_date(when),
+                "date": mailutil.friendly_date(when),
                 "sort_key": when,
                 "unread": b"\\Seen" not in flags,
             })

@@ -18,25 +18,26 @@ MAX_LINES_SHOWN = 12
 
 BOT_NAME = config.setting("bot_name", "Kingdom Group Mailer")
 
+_MAILBOX_COUNT = len(config.mailboxes())
+
 WELCOME_TEXT = (
-    f"👋 Welcome to <b>{BOT_NAME}</b>.\n\n"
-    "I watch the company inboxes and message you when something important "
-    "arrives. You can also just ask me things:\n\n"
-    "📥 <b>is there new mail?</b>\n"
-    "📅 <b>anything come in today?</b>\n"
-    "🔵 <b>any unread mail?</b>\n"
-    "🔍 <b>find email from KRA</b>\n"
-    "🏢 <b>any mail from Beacon about the tender?</b>\n"
-    "✅ <b>are you working?</b>\n\n"
-    "Ask in plain words, no commands needed. Name a company and I will "
-    "check only that inbox, otherwise I check them all.\n\n"
-    "I only ever read mail. I never send, reply to, delete or open anything."
+    f"<b>{BOT_NAME}</b>\n\n"
+    f"Watching {_MAILBOX_COUNT} inboxes. Mail arrives here with a summary "
+    "and what it needs from you.\n\n"
+    "<b>Ask for anything</b>\n"
+    "New mail?\n"
+    "Anything from KRA?\n"
+    "What came in today?\n"
+    "Unread for Geowells?\n"
+    "Beacon - anything on the tender?\n\n"
+    "Name a company to narrow it down.\n"
+    "Read-only access. Nothing is sent, replied to or deleted."
 )
 
 HELP_TEXT = WELCOME_TEXT
 
 PRIVATE_NOTICE = (
-    "This assistant is private and is not available for general use."
+    "Private system. Access is by approval only."
 )
 
 
@@ -85,11 +86,12 @@ def _format(results, errors, heading, empty_text):
     if not results:
         text = empty_text
         if errors:
-            text += f"\n\n({len(errors)} mailbox(es) could not be reached)"
+            text += f"\n\n({len(errors)} unreachable)"
         return text
 
     total = sum(r["total"] for r in results)
-    lines = [f"{heading} — <b>{total}</b> across {len(results)} mailbox(es):\n"]
+    box = "inbox" if len(results) == 1 else "inboxes"
+    lines = [f"<b>{total}</b> {heading} - {len(results)} {box}\n"]
 
     shown = 0
     for result in results:
@@ -112,35 +114,34 @@ def _format(results, errors, heading, empty_text):
         lines.append("")
 
     if errors:
-        lines.append(f"({len(errors)} mailbox(es) could not be reached)")
+        lines.append(f"({len(errors)} unreachable)")
     return "\n".join(lines).strip()
 
 
 def _status_text():
-    import main  # imported here to avoid a circular import at module load
+    import main  # here to avoid a circular import at module load
 
     usable, skipped = config.configured_mailboxes()
     last = main.last_run()
+    interval = config.setting("poll_interval_minutes", 30)
 
     lines = [
-        "✅ <b>Running.</b>",
-        f"Mailboxes watched: <b>{len(usable)}</b>",
+        "✅ <b>Running</b>",
+        f"{len(usable)} inboxes - checked every {interval} min",
     ]
     if skipped:
-        lines.append(f"Missing a password: {len(skipped)} — {esc(', '.join(m['company'] for m in skipped))}")
+        names = ", ".join(m["company"] for m in skipped)
+        lines.append(f"⚠️ No password: {esc(names)}")
     if last:
-        lines.append(
-            f"\nLast check: {esc(last['finished_at'])}\n"
-            f"Checked {last['checked']} mailbox(es), "
-            f"{last['new_messages']} new, {last['alerted']} alert(s)"
-        )
+        lines.append("")
+        lines.append(f"<b>Last check</b> {esc(last['finished_at'])}")
+        lines.append(f"{last['new_messages']} new, {last['alerted']} sent")
         if last.get("errors"):
-            lines.append(f"Errors last run: {len(last['errors'])}")
+            lines.append(f"{len(last['errors'])} error(s)")
     else:
-        lines.append("\nNo check has run yet since the service started.")
-    lines.append(f"Checks run every {config.setting('poll_interval_minutes', 30)} minutes.")
+        lines.append("")
+        lines.append("No check run yet since last restart.")
     return "\n".join(lines)
-
 
 def handle_command(text):
     """Answer a slash command directly, without asking the model. None if not one."""
@@ -175,7 +176,7 @@ def handle_message(text, notify=None):
 
     mailboxes, narrowed = _select_mailboxes(instruction["company_hint"])
     if not mailboxes:
-        return "No mailboxes are configured with a password yet."
+        return "No inboxes configured."
 
     scope = f"{mailboxes[0]['company']}" if narrowed and len(mailboxes) == 1 else f"{len(mailboxes)} mailboxes"
 
@@ -184,7 +185,7 @@ def handle_message(text, notify=None):
         if not keyword:
             return HELP_TEXT
         if notify:
-            notify(f"Searching {esc(scope)} for “{esc(keyword)}”…")
+            notify(f"Searching {esc(scope)}...")
         results, errors = _query_all(
             mailboxes,
             lambda mb: search.search_mailbox(
@@ -192,12 +193,12 @@ def handle_message(text, notify=None):
                 config.mailbox_password(mb), keyword, limit=PER_MAILBOX_LIMIT,
             ),
         )
-        return _format(results, errors, f"Matches for “{esc(keyword)}”",
+        return _format(results, errors, f"matches for “{esc(keyword)}”",
                        f"No matches for “{esc(keyword)}”.")
 
     if intent == "unread":
         if notify:
-            notify(f"Checking unread mail in {esc(scope)}…")
+            notify(f"Checking {esc(scope)}...")
         results, errors = _query_all(
             mailboxes,
             lambda mb: search.unread_mail(
@@ -205,13 +206,13 @@ def handle_message(text, notify=None):
                 config.mailbox_password(mb), limit=PER_MAILBOX_LIMIT,
             ),
         )
-        return _format(results, errors, "Unread mail", "Nothing unread — all clear.")
+        return _format(results, errors, "unread", "Nothing unread.")
 
     # intent == "recent"
     hours = instruction["hours"] or 24
     window = "the last 24 hours" if hours == 24 else f"the last {hours} hours"
     if notify:
-        notify(f"Checking {esc(scope)} for mail from {window}…")
+        notify(f"Checking {esc(scope)}...")
     results, errors = _query_all(
         mailboxes,
         lambda mb: search.recent_mail(
@@ -219,5 +220,5 @@ def handle_message(text, notify=None):
             config.mailbox_password(mb), hours=hours, limit=PER_MAILBOX_LIMIT,
         ),
     )
-    return _format(results, errors, f"New mail in {window}",
+    return _format(results, errors, f"new in {window}",
                    f"Nothing new in {window}.")

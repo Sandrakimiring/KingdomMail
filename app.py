@@ -91,7 +91,7 @@ def _handle_question(chat_id, text):
         send_message(reply, chat_id=chat_id)
     except Exception as exc:
         print(f"[webhook error] {type(exc).__name__}: {exc}")
-        send_message("Something went wrong answering that. Please try again.", chat_id=chat_id)
+        send_message("That request failed. Try again.", chat_id=chat_id)
 
 
 @app.route("/telegram-webhook", methods=["POST"])
@@ -134,30 +134,30 @@ def telegram_webhook():
         if auth.try_unlock(chat_id, text):
             auth.log("unlocked", message)
             send_message(
-                "🔓 Unlocked for " + str(auth.UNLOCK_HOURS) + " hours.\n\n"
-                "Please delete the message with the passcode in it.\n\n"
-                "Send /lock when you are done.",
+                "🔓 Unlocked for " + str(auth.UNLOCK_HOURS) + " hours. "
+                "Delete your passcode message.\n"
+                "/lock to end early.",
                 chat_id=chat_id,
             )
             send_message(secretary.WELCOME_TEXT, chat_id=chat_id)
         else:
             auth.log("locked-out", message)
             send_message(
-                "🔒 Locked. Send the passcode to unlock.", chat_id=chat_id
+                "🔒 Locked. Enter passcode.", chat_id=chat_id
             )
         return "ok", 200
 
     if text.strip().lower().lstrip("/") == "lock":
         auth.lock(chat_id)
         auth.log("locked", message)
-        send_message("🔒 Locked. Send the passcode when you need me again.",
+        send_message("🔒 Locked.",
                      chat_id=chat_id)
         return "ok", 200
 
     # Layer 4: an approved account still cannot hammer the mailboxes.
     if not auth.within_rate_limit(chat_id):
         auth.log("rate-limited", message)
-        send_message("That's a lot of questions at once — give me a minute.", chat_id=chat_id)
+        send_message("Too many requests. Wait a minute.", chat_id=chat_id)
         return "ok", 200
 
     if _already_handled(update.get("update_id")):

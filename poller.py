@@ -92,7 +92,7 @@ def fetch_new_emails(host, port, address, password, last_uid, last_uidvalidity,
                     "from": mailutil.envelope_sender(envelope),
                     "subject": mailutil.envelope_subject(envelope),
                     "snippet": mailutil.extract_snippet(mailutil.body_bytes(data)),
-                    "date": mailutil.format_date(when),
+                    "date": mailutil.friendly_date(when),
                 })
             except Exception as exc:
                 # One unparseable message must not cost us the whole batch.

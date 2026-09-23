@@ -106,7 +106,9 @@ def envelope_sender(envelope):
         address = f"{mailbox}@{host}"
     else:
         address = mailbox or host or "unknown sender"
-    return f"{name} <{address}>" if name else address
+    if name and name.strip().lower() != address.strip().lower():
+        return f"{name} <{address}>"
+    return address
 
 
 def envelope_subject(envelope):
@@ -241,3 +243,20 @@ def looks_like_bulk(raw):
     if str(message.get("precedence", "")).lower().strip() in {"bulk", "junk", "list"}:
         return True
     return False
+
+
+def friendly_date(value):
+    """Today 15:21, Yesterday 09:13, or 20 Sep 12:23."""
+    moment = to_utc(value)
+    if not moment:
+        return ""
+    now = datetime.now(timezone.utc)
+    days = (now.date() - moment.date()).days
+    clock = moment.strftime("%H:%M")
+    if days == 0:
+        return f"Today {clock}"
+    if days == 1:
+        return f"Yesterday {clock}"
+    if 0 < days < 7:
+        return moment.strftime("%a %H:%M")
+    return moment.strftime("%d %b %H:%M")
