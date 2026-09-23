@@ -46,6 +46,64 @@ Two halves, sharing the same config and mail-reading code:
 | `mailutil.py` | Shared IMAP connection and email parsing. |
 | `app.py` | The web service. |
 
+## Going live — the whole checklist
+
+Run `python show_setup.py` first. It prints every value you need below, plus
+your ready-made webhook and scheduler URLs. Keep that output private.
+
+**1. Create the web service**
+
+On render.com: **New → Web Service** → connect `Sandrakimiring/KingdomMail`.
+
+| Field | Value |
+|---|---|
+| Build command | `pip install -r requirements.txt` |
+| Start command | `gunicorn app:app --workers 1 --threads 4 --timeout 120` |
+| Instance type | Free |
+
+One worker. More than one means duplicate alerts.
+
+**2. Add the environment variables**
+
+Under **Environment**, add every line `show_setup.py` printed: the 21 mailbox
+passwords, `GROQ_API_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`,
+`BOT_PASSCODE`, `RUN_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`.
+
+Deploy. When it finishes you get a URL like `https://kingdommail.onrender.com`.
+
+**3. Check it started**
+
+Open `https://YOUR-APP.onrender.com/status`. You should see
+`"mailboxes_watched": 21` and an empty `mailboxes_missing_password`. If any
+mailbox is listed there, its password did not make it into the environment.
+
+**4. Connect Telegram**
+
+Open the `setWebhook` URL from `show_setup.py` once in a browser. You should
+see `{"ok":true,...}`. Then message the bot: send the passcode, then `/start`.
+
+**5. Schedule the checks**
+
+On cron-job.org, create a job:
+
+- URL: the `/run-check?token=...` URL from `show_setup.py`
+- Every 30 minutes
+
+**6. Confirm it is alive**
+
+Wait for one cycle, then ask the bot **are you working?**. It should report 21
+mailboxes and the time of the last check. That is it — it now runs by itself.
+
+### If something is wrong
+
+| Symptom | Cause |
+|---|---|
+| Bot silent | Webhook not set, or the secret does not match |
+| "Locked" | Send the passcode; sessions last 24 hours |
+| A company missing from `/status` | Its password is not in the environment |
+| No alerts ever | Check the scheduler is actually firing `/run-check` |
+| Classification failing | The Groq model was retired — see section 2 |
+
 ## 1. IMAP details for each mailbox
 
 In cPanel → **Email Accounts** → **Connect Devices**, use the hostname shown
