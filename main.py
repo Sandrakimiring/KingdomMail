@@ -181,6 +181,10 @@ def run_once():
         for mailbox, result in sorted(fetched, key=lambda item: item[0]["company"]):
             company = mailbox["company"]
 
+            if result.get("recovered") and result["messages"]:
+                print(f"[recover] {company}: state was lost; re-checking recent mail")
+                summary.setdefault("recovered", []).append(company)
+
             if result["bootstrapped"]:
                 reason = "UIDs were renumbered by the server" if result["renumbered"] \
                     else "first time seeing this mailbox"

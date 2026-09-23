@@ -157,9 +157,21 @@ mailboxes:
     mode: "all"
 
 settings:
-  # "all" = a message for every email. "important" = only what matters.
-  alert_on: "all"
   bot_name: "Kingdom Group Mailer"
+
+  # How often the scheduler is expected to call /run-check.
   poll_interval_minutes: 30
+
+  # "all" sends a message for every email. "important" only for tenders,
+  # invoices, deadlines and messages waiting on a reply.
+  alert_on: "all"
+
+  # The state file is lost whenever the host restarts without a persistent
+  # disk. "lookback" then re-checks the last lookback_minutes rather than
+  # starting silently, so a restart costs a repeated alert instead of a
+  # missed email. Use "bootstrap" only for a genuinely fresh install.
+  on_missing_state: "lookback"
+  lookback_minutes: 40
+
   state_file: "state.json"
   known_senders_file: "known_senders.json"
