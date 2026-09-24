@@ -102,6 +102,38 @@ def _owner_command(chat_id, text):
         lines.append("/approve &lt;id&gt; to add, /revoke &lt;id&gt; to remove.")
         return "\n".join(lines)
 
+    if command == "alerts":
+        if len(parts) < 2:
+            rows = auth.alert_recipients()
+            lines = ["<b>Receiving alerts</b>"]
+            for identifier, level in rows:
+                who = "you" if identifier == auth.owner_chat_id() else identifier
+                lines.append(f"<code>{esc(who)}</code> - {esc(level)}")
+            lines.append("")
+            lines.append("/alerts &lt;id&gt; all - every email")
+            lines.append("/alerts &lt;id&gt; important - only what matters")
+            lines.append("/alerts &lt;id&gt; off - stop alerts")
+            return "\n".join(lines)
+
+        target = auth.normalise_id(parts[1])
+        level = (parts[2].lower() if len(parts) > 2 else "important")
+
+        if not auth.is_allowed(target):
+            return f"<code>{esc(target)}</code> is not approved yet. Use /approve first."
+        if level == "off":
+            auth.set_alerts(target, None)
+            return f"Alerts off for <code>{esc(target)}</code>."
+        if level not in auth.ALERT_LEVELS:
+            return "Use: /alerts &lt;id&gt; all | important | off"
+
+        auth.set_alerts(target, level)
+        if target != auth.owner_chat_id():
+            send_message(
+                f"You will now receive {level} mail alerts from {secretary.BOT_NAME}.",
+                chat_id=target,
+            )
+        return f"<code>{esc(target)}</code> now gets <b>{esc(level)}</b> alerts."
+
     if command in {"approve", "revoke"}:
         if len(parts) < 2:
             return f"Use /{command} &lt;id&gt;"
@@ -114,8 +146,11 @@ def _owner_command(chat_id, text):
                     chat_id=target,
                 )
                 send_message(secretary.WELCOME_TEXT, chat_id=target)
-                return f"Approved <code>{esc(target)}</code>."
+                return (f"Approved <code>{esc(target)}</code>.\n\n"
+                        f"They can ask questions now. To push alerts to them too:\n"
+                        f"<code>/alerts {esc(target)} important</code>")
             return f"<code>{esc(target)}</code> was already approved."
+        auth.set_alerts(target, None)
         if auth.revoke(target):
             return f"Removed <code>{esc(target)}</code>."
         return f"<code>{esc(target)}</code> was not on the list, or is set in the environment."

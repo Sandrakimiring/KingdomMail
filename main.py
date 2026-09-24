@@ -86,28 +86,25 @@ def _handle_messages(mailbox, result, state, summary):
 
         important = verdict["important"]
 
-        # "all" alerts on everything; "important" only on what matters.
-        alert_on = config.setting("alert_on", "important")
-        should_alert = important or alert_on == "all"
+        flag = "IMPORTANT" if important else "   fyi   "
+        print(f"[{flag}] {company}: {message['subject'][:52]} -> {verdict['category']}")
 
-        flag = "ALERT" if should_alert else "  -  "
-        print(f"[{flag}] {company}: {message['subject'][:55]} -> {verdict['category']}")
+        # Every email is offered; each recipient's own level decides who is
+        # actually messaged.
+        delivered = send_alert(
+            company=company,
+            sender=sender,
+            subject=message["subject"],
+            summary=verdict.get("summary", ""),
+            category=verdict.get("category", ""),
+            action=verdict.get("action", ""),
+            deadline=verdict.get("deadline", ""),
+            date=message.get("date", ""),
+            important=important,
+        )
+        if delivered:
+            summary["alerted"] += 1
 
-        if should_alert:
-            sent = send_alert(
-                company=company,
-                sender=sender,
-                subject=message["subject"],
-                summary=verdict.get("summary", ""),
-                category=verdict.get("category", ""),
-                action=verdict.get("action", ""),
-                deadline=verdict.get("deadline", ""),
-                date=message.get("date", ""),
-            )
-            if sent:
-                summary["alerted"] += 1
-            else:
-                summary["errors"].append(f"{company}: alert could not be delivered")
 
         new_senders.append(sender)
 

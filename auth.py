@@ -25,6 +25,7 @@ UNLOCK_HOURS = 24
 
 _SESSION_FILE = "sessions.json"
 _APPROVED_FILE = "approved.json"
+_ALERTS_FILE = "alerts.json"
 
 _lock = threading.Lock()
 _recent_questions = defaultdict(deque)
@@ -235,6 +236,86 @@ def lock(chat_id):
         sessions = _load_sessions()
         sessions.pop(key, None)
         _save_sessions(sessions)
+
+
+# --- Who receives pushed alerts -----------------------------------------
+# Being approved lets someone ask questions. Receiving alerts is separate, so
+# a person can have access without their phone lighting up for every email.
+#
+# Levels: "all" for every email, "important" for tenders, invoices, deadlines
+# and messages waiting on a reply.
+
+ALERT_LEVELS = ("all", "important")
+
+
+def _default_level():
+    level = str(config.setting("alert_on", "important")).lower()
+    return level if level in ALERT_LEVELS else "important"
+
+
+def _load_alerts():
+    path = config.state_path(_ALERTS_FILE)
+    if not path.exists():
+        return {}
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {}
+
+
+def _save_alerts(alerts):
+    try:
+        with open(config.state_path(_ALERTS_FILE), "w", encoding="utf-8") as f:
+            json.dump(alerts, f, indent=2)
+    except OSError as exc:
+        print(f"[warn] could not save alert settings: {exc}")
+
+
+def set_alerts(chat_id, level):
+    """Turn alerts on at a level, or off when level is None."""
+    key = normalise_id(chat_id)
+    if not key:
+        return False
+    with _lock:
+        alerts = _load_alerts()
+        if level is None:
+            alerts.pop(key, None)
+        else:
+            alerts[key] = level
+        _save_alerts(alerts)
+    return True
+
+
+def alert_recipients():
+    """
+    [(chat_id, level)] for everyone who should receive pushed alerts.
+
+    The owner is always included. Only approved people can be recipients, so
+    revoking access also stops the alerts.
+    """
+    recipients = {}
+
+    # TELEGRAM_ALERT_CHAT_IDS survives a restart; entries may name a level,
+    # as in "123456:important".
+    for raw in config.env("TELEGRAM_ALERT_CHAT_IDS", "").split(","):
+        entry = raw.strip()
+        if not entry:
+            continue
+        identifier, _, level = entry.partition(":")
+        key = normalise_id(identifier)
+        if key:
+            recipients[key] = level.strip().lower() if level.strip().lower() in ALERT_LEVELS else _default_level()
+
+    for key, level in _load_alerts().items():
+        recipients[key] = level if level in ALERT_LEVELS else _default_level()
+
+    owner = owner_chat_id()
+    if owner:
+        recipients.setdefault(owner, _default_level())
+
+    allowed = allowed_chat_ids()
+    return [(key, level) for key, level in recipients.items() if key in allowed]
 
 
 def log(event, message, detail=""):

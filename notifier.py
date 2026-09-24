@@ -12,6 +12,7 @@ import time
 
 import requests
 
+import auth
 import config
 
 TELEGRAM_MAX_CHARS = 4096
@@ -114,8 +115,14 @@ def _plain(text):
     return html.unescape(text)
 
 
-def send_alert(company, sender, subject, summary, category, action="", deadline="", date=""):
-    """One alert, ending with what to do about it."""
+def send_alert(company, sender, subject, summary, category, action="", deadline="",
+               date="", important=True):
+    """
+    Send one alert to everyone who should receive it.
+
+    Each recipient has their own level, so the owner can take everything while
+    someone else only hears about what matters. Returns how many were reached.
+    """
     emoji = CATEGORY_EMOJI.get(category, "📧")
 
     parts = [
@@ -136,4 +143,12 @@ def send_alert(company, sender, subject, summary, category, action="", deadline=
             parts.append("")
         parts.append(f"👉 <b>{esc(action)}</b>")
 
-    return send_message("\n".join(parts))
+    text = "\n".join(parts)
+
+    delivered = 0
+    for chat_id, level in auth.alert_recipients():
+        if level == "important" and not important:
+            continue
+        if send_message(text, chat_id=chat_id):
+            delivered += 1
+    return delivered

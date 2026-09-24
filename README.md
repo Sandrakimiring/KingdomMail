@@ -237,6 +237,26 @@ id so you can add them if they belong.
 **3. A rate limit.** Ten questions per minute per person, so an approved
 account cannot hammer the mail server.
 
+### Who receives alerts
+
+Being approved lets someone **ask** questions. Receiving **pushed** alerts is
+separate, so a person can have access without their phone lighting up for every
+email that arrives.
+
+| Command | What it does |
+|---|---|
+| `/alerts` | Shows who receives alerts, and at which level |
+| `/alerts <id> important` | Only tenders, invoices, deadlines and replies awaited |
+| `/alerts <id> all` | Every email |
+| `/alerts <id> off` | Stops their alerts; they can still ask questions |
+
+You always receive alerts. Others receive none until you turn them on, and only
+an approved person can be a recipient, so revoking access also stops the alerts.
+
+These settings live in `alerts.json`, which is lost when a host without a
+persistent disk restarts. `TELEGRAM_ALERT_CHAT_IDS` in the environment is the
+durable version and takes the form `111111:all,222222:important`.
+
 ### Adding someone
 
 You do not need to know anyone's Telegram id in advance.
