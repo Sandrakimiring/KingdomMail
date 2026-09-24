@@ -1,14 +1,23 @@
 # Email → Telegram Monitor
 
-Watches several mailboxes read-only and sends a free Telegram message only for
-emails an AI decides are important. You can also just ask it questions in
-Telegram — "is there new mail?", "find email from KRA".
+Watches 21 company mailboxes read-only and sends a Telegram message when mail
+arrives, with a summary of what it says and what it needs from you. You can
+also just ask it things — "is there new mail?", "balcom", "anything from KRA?".
 
-Nothing is ever sent, deleted, moved or marked as read. The owner's inbox is
+Each person can choose to receive every email or only what matters: tenders,
+invoices, deadlines and messages waiting on a reply.
+
+Nothing is ever sent, deleted, moved or marked as read. The inboxes are
 untouched; this only ever reads.
 
 **Cost: $0/month.** Telegram is free, Groq's classification API is free at this
 volume, and a free web service tier covers hosting.
+
+## Other documents
+
+- **OPERATIONS.md** - running it, troubleshooting, and the things that were
+  painful to work out the first time
+- **ROADMAP.md** - improvements not built yet, with the reasoning behind each
 
 ## How it works
 
