@@ -9,6 +9,11 @@ cost time to diagnose (wrong IMAP hostname, retired Groq model, reasoning tokens
 eating `max_tokens`, a trailing comma in a chat id). `ROADMAP.md` has what is
 deliberately not built yet, and why.
 
+**`ENGINEERING-LOG.md` is the full history** — every bug, how it was actually
+found, why each decision went the way it did, and what was rejected. Long on
+purpose. If you are picking this up cold, or starting a similar project, the
+debugging methods in Parts 5 to 7 are the reusable part.
+
 ## Layout
 
 | File | Role |

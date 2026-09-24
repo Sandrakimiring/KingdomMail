@@ -18,6 +18,8 @@ volume, and a free web service tier covers hosting.
 - **OPERATIONS.md** - running it, troubleshooting, and the things that were
   painful to work out the first time
 - **ROADMAP.md** - improvements not built yet, with the reasoning behind each
+- **ENGINEERING-LOG.md** - the full build history: every bug, how it was found,
+  and why each decision went the way it did
 
 ## How it works
 
